@@ -13,47 +13,45 @@ import { Input } from "../components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { formSchema } from "../hookform/resolvers/zod";
 import useUserStore from "../store/store";
 
-// Define login form schema using zod
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const Login = () => {
+const Signup = () => {
   const navigate = useNavigate();
   const setUser = useUserStore((state) => state.setUser);
 
-  // Use the form hook with zod schema
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
+      email: "",
+      profileImage: null,
     },
   });
 
-  // Handle login form submission
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const fileRef = form.register("profileImage");
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Send login request to API
-      const { data } = await axios.post(
-        "http://localhost:5000/auth/login",
-        {
-          email: values.email,
-          password: values.password,
-        },
-        { withCredentials: true }
-      );
+      const formData = new FormData();
+      formData.append("username", values.username);
+      formData.append("password", values.password);
+      formData.append("email", values.email);
+
+      if (values.profileImage && values.profileImage.length > 0) {
+        formData.append("profileImage", values.profileImage[0]);
+      }
 
       setUser({
-        username: data.username,
-        email: data.email,
-        profileImage: data.profileImage ? data.profileImage[0] : null,
+        username: values.username,
+        email: values.email,
+        profileImage: values.profileImage ? values.profileImage[0] : null,
       });
 
-      // Redirect to the dashboard after successful login
+      await axios.post("http://localhost:5000/auth/Signup", formData, {
+        withCredentials: true,
+      });
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
@@ -63,13 +61,47 @@ const Login = () => {
   return (
     <div className="flex items-center justify-center flex-1 text-white">
       <div className="w-full max-w-md flex flex-col gap-8 shadow-lg rounded-lg p-8 bg-gradient-to-r from-neutral-900 to-gray-800">
-        <h2 className="text-2xl font-bold text-center">Login</h2>
+        <h2 className="text-2xl font-bold text-center">Sign up</h2>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-8"
           >
-            {/* Email Field */}
+            <FormField
+              control={form.control}
+              name="profileImage"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Profile Image</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      placeholder="Upload your image..."
+                      {...fileRef}
+                      accept="image/*"
+                      className="file:text-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your name..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
@@ -86,8 +118,6 @@ const Login = () => {
                 </FormItem>
               )}
             />
-
-            {/* Password Field */}
             <FormField
               control={form.control}
               name="password"
@@ -105,19 +135,18 @@ const Login = () => {
                 </FormItem>
               )}
             />
-
             <div className="flex flex-col gap-4">
-              <Button type="submit">Login</Button>
+              <Button type="submit">Sign up</Button>
               <Button
                 type="button"
                 className="flex gap-2"
               >
-                <span>Don't have account? </span>
+                <span>Already have an account?</span>
                 <NavLink
-                  to="/signup"
-                  className="underline"
+                  to="/login"
+                  className={"underline"}
                 >
-                  create a account
+                  login
                 </NavLink>
               </Button>
             </div>
@@ -128,4 +157,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
